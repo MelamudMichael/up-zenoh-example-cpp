@@ -26,6 +26,7 @@
 #include <cstdlib>
 #include <cstring>
 #include <csignal>
+#include <vector>
 #include <unistd.h> // For sleep
 
 #include <spdlog/spdlog.h>
@@ -54,47 +55,53 @@ void signalHandler(int signal) {
     }
 }
 
-std::uint8_t* getTime() {
-
-    auto currentTime = std::chrono::system_clock::now();
+std::vector<std::uint8_t> getTime() {
+    using namespace std;
+    auto currentTime = chrono::system_clock::now();
     auto duration = currentTime.time_since_epoch();
-    auto timeMilli = std::chrono::duration_cast<std::chrono::milliseconds>(duration).count();
-    static std::uint8_t buf[8];
-    std::memcpy(buf, &timeMilli, sizeof(timeMilli));
-
-    return buf;
+    auto timeMilli = chrono::duration_cast<chrono::milliseconds>(duration).count();
+    cout << "timeMilli = " << timeMilli << endl;
+    vector<uint8_t> ret(sizeof(timeMilli));
+    memcpy(ret.data(), &timeMilli, sizeof(timeMilli));
+    return ret;
 }
 
-std::uint8_t* getRandom() {
-    
-    int32_t val = std::rand();
-    static std::uint8_t buf[4];
-    std::memcpy(buf, &val, sizeof(val));
-
-    return buf;
+std::vector<std::uint8_t> getRandom() {
+    using namespace std;
+    int32_t val = rand();
+    cout << "random val = " << val << endl;
+    vector<uint8_t> ret(sizeof(val));
+    memcpy(ret.data(), &val, sizeof(val));
+    return ret;
 }
 
-std::uint8_t* getCounter() {
-    
+std::vector<std::uint8_t> getCounter() {
+    using namespace std;   
     static std::uint8_t counter = 0;
     ++counter;
-
-    return &counter;
+    cout << "counter = " << int(counter) << endl;
+    vector<uint8_t> ret(sizeof(counter));
+    memcpy(ret.data(), &counter, sizeof(counter));
+    return ret;
 }
 
+template <typename T>
 UCode sendMessage(ZenohUTransport *transport,
                   UUri &uri,
-                  std::uint8_t *buffer,
-                  size_t size) {
+                  const T& seq) {
    
     auto uuid = Uuidv8Factory::create();
    
     UAttributesBuilder builder(uuid, UMessageType::UMESSAGE_TYPE_PUBLISH, UPriority::UPRIORITY_CS0);
+    builder.setSource(uri);
     UAttributes attributes = builder.build();
    
-    UPayload payload(buffer, size, UPayloadType::VALUE);
+    UPayload payload(seq.data(), seq.size(), UPayloadType::VALUE);
+    UMessage message;
+    message.setAttributes(attributes);
+    message.setPayload(payload);
    
-    UStatus status = transport->send(uri, payload, attributes);
+    UStatus status = transport->send(message);
     if (UCode::OK != status.code()) {
         spdlog::error("send.send failed");
         return UCode::UNAVAILABLE;
@@ -129,19 +136,19 @@ int main(int argc,
 
     while (!gTerminate) {
         /* send current time in milliseconds */
-        if (UCode::OK != sendMessage(transport, timeUri, getTime(), 8)) {
+        if (UCode::OK != sendMessage(transport, timeUri, getTime())) {
             spdlog::error("sendMessage failed");
             break;
         }
 
         /* send random number */
-        if (UCode::OK != sendMessage(transport, randomUri, getRandom(), 4)) {
+        if (UCode::OK != sendMessage(transport, randomUri, getRandom())) {
             spdlog::error("sendMessage failed");
             break;
         }
 
         /* send counter */
-        if (UCode::OK != sendMessage(transport, counterUri, getCounter(), 1)) {
+        if (UCode::OK != sendMessage(transport, counterUri, getCounter())) {
             spdlog::error("sendMessage failed");
             break;
         }

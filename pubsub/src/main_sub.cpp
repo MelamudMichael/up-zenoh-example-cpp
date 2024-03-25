@@ -52,9 +52,17 @@ class CustomListener : public UListener {
     public:
 
         UStatus onReceive(UMessage &message) const override {
-            
+            using namespace std;
             (void)message;
-            
+            auto& payload = message.payload();
+            cout << "onReceive payload=" << typeid(payload).name()
+                << " size=" << payload.size()
+                // << " type=" << int(payload.type())
+                << " format=" << payload.format();
+            for (size_t i = 0; i < payload.size(); i++) {
+                cout << ' ' << int(payload.data()[i]);
+            }
+            cout << endl;
             // if (TIME_URI_STRING == LongUriSerializer::serialize(uri)) {
             
             //     const uint64_t  *timeInMilliseconds = reinterpret_cast<const uint64_t*>(payload.data());
