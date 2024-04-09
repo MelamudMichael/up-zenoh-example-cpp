@@ -49,6 +49,10 @@ target_include_directories(sub
         ${spdlog_INCLUDE_DIR}
         ${up-cpp_INCLUDE_DIR})
 
+target_include_directories(sub 
+    PRIVATE
+        include)
+
 # pub
 add_executable(pub src/main_pub.cpp)
 target_link_libraries(pub
@@ -62,3 +66,7 @@ target_include_directories(pub
         ${fmt_INCLUDE_DIR}
         ${spdlog_INCLUDE_DIR}
         ${up-cpp_INCLUDE_DIR})
+
+target_include_directories(pub 
+    PRIVATE
+        include)
